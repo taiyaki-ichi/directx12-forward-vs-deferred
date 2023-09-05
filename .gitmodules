@@ -1,0 +1,6 @@
+[submodule "external/directx12-wrapper"]
+	path = external/directx12-wrapper
+	url = git@github.com:taiyaki-ichi/directx12-wrapper.git
+[submodule "external/OBJ-Loader"]
+	path = external/OBJ-Loader
+	url = git@github.com:Bly7/OBJ-Loader.git
