@@ -1,8 +1,9 @@
 
+#define MAX_MODEL_NUM 1000
 
 cbuffer ConstantBufferObject : register(b0)
 {
-	matrix model;
+	matrix model[MAX_MODEL_NUM];
 	matrix view;
 	matrix proj;
 	float3 eye;

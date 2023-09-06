@@ -16,9 +16,9 @@ float3 CalcSpecular(float3 lightDir, float3 lightColor, float3 normal, float3 to
 float4 main(VSOutput input) : SV_TARGET
 {
 	float3 lightDir = normalize(float3(1.f,0.f,1.f));
-	float3 lightColor = float3(1.f, 0.f, 0.f);
+	float3 lightColor = float3(0.5f, 0.5f, 0.5f);
 
-	float3 ambient = lightColor * 0.2f;
+	float3 ambient = float3(1.f, 1.f, 1.f) * 0.6f;
 	float3 diffuse = CalcDiffuse(lightDir, lightColor, input.norm.xyz);
 	float3 specular = CalcSpecular(lightDir, lightColor, input.norm.xyz, input.ray, 100.f);
 

@@ -31,10 +31,12 @@ constexpr std::size_t MAX_FRAMES_IN_FLIGHT = FRAME_BUFFER_NUM;
 // 深度バッファのフォーマット
 constexpr DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
 
+constexpr std::size_t MAX_MODEL_NUM = 1000;
+
 // 定数バッファに渡すデータ
 struct ConstantBufferObject
 {
-	XMMATRIX model{};
+	XMMATRIX model[MAX_MODEL_NUM]{};
 	XMMATRIX view{};
 	XMMATRIX proj{};
 	XMFLOAT3 eye{};
@@ -43,6 +45,12 @@ struct ConstantBufferObject
 
 int main()
 {
+	
+	std::size_t modelEdgeNum = 8;
+	std::size_t modelToltalNum = modelEdgeNum * modelEdgeNum * modelEdgeNum;
+	constexpr float modelStrideLen = 8.f;
+
+
 	// ウィンドウハンドル
 	auto hwnd = dx12w::create_window(L"forward", WINDOW_WIDTH, WINDOW_HEIGHT);
 
@@ -210,7 +218,7 @@ int main()
 	// シザーレクト
 	constexpr D3D12_RECT scissorRect{ 0,0,static_cast<LONG>(WINDOW_WIDTH),static_cast<LONG>(WINDOW_HEIGHT) };
 
-	XMFLOAT3 eye{ 0.f,5.f,5.f };
+	XMFLOAT3 eye{ 0.f,30.f,30.f };
 	XMFLOAT3 target{ 0,0,0 };
 	XMFLOAT3 up{ 0,1,0 };
 	float asspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
@@ -220,12 +228,24 @@ int main()
 	// メインループ
 	//
 
+	std::size_t frameCnt = 0;
 	while (dx12w::update_window())
 	{
+		frameCnt++;
+
 		auto backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 
 		// 定数バッファのデータをマップ
-		constantBufferPtrs[backBufferIndex]->model = XMMatrixIdentity();
+		for (std::size_t x_i = 0; x_i < modelEdgeNum; x_i++)
+			for (std::size_t y_i = 0; y_i < modelEdgeNum; y_i++)
+				for (std::size_t z_i = 0; z_i < modelEdgeNum; z_i++)
+					constantBufferPtrs[backBufferIndex]->model[x_i + y_i * modelEdgeNum + z_i * modelEdgeNum * modelEdgeNum] =
+					XMMatrixRotationY(static_cast<float>(frameCnt) / 50.f) *
+					XMMatrixTranslation(
+						x_i * modelStrideLen - modelEdgeNum * modelStrideLen / 2.f,
+						y_i * modelStrideLen - modelEdgeNum * modelStrideLen / 2.f,
+						z_i * modelStrideLen - modelEdgeNum * modelStrideLen / 2.f
+					);
 		constantBufferPtrs[backBufferIndex]->view = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		constantBufferPtrs[backBufferIndex]->proj = DirectX::XMMatrixPerspectiveFovLH(VIEW_ANGLE, asspect, CAMERA_NEAR_Z, CAMERA_FAR_Z);
 		constantBufferPtrs[backBufferIndex]->eye = eye;
@@ -267,7 +287,7 @@ int main()
 
 		commandManager.get_list()->IASetVertexBuffers(0, 1, &modelVertexBufferView);
 
-		commandManager.get_list()->DrawInstanced(static_cast<UINT>(modelVertexNum), 1, 0, 0);
+		commandManager.get_list()->DrawInstanced(static_cast<UINT>(modelVertexNum), modelToltalNum, 0, 0);
 
 		//
 		// モデルの描画終わり
