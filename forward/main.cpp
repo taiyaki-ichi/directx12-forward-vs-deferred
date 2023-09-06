@@ -1,5 +1,5 @@
 #include"../external/directx12-wrapper/dx12w/dx12w.hpp"
-
+#include"../external/OBJ-Loader/Source/OBJ_Loader.h"
 
 constexpr std::size_t WINDOW_WIDTH = 800;
 constexpr std::size_t WINDOW_HEIGHT = 600;
@@ -44,6 +44,41 @@ int main()
 
 		for (std::size_t i = 0; i < FRAME_BUFFER_NUM; i++)
 			dx12w::create_texture2D_RTV(device.get(), frameBufferDescriptorHeapRTV.get_CPU_handle(i), frameBufferResources[i].first.get(), FRAME_BUFFER_FORMAT, 0, 0);
+	}
+
+	// ƒ‚ƒfƒ‹‚Ì’¸“_î•ñ
+	dx12w::resource_and_state modelVertexBuffer{};
+	D3D12_VERTEX_BUFFER_VIEW modelVertexBufferView{};
+	std::size_t modelVertexNum = 0;
+	{
+		objl::Loader Loader;
+
+		bool loadout = Loader.LoadFile("model/teapot.obj");
+		objl::Mesh mesh = Loader.LoadedMeshes[0];
+
+		modelVertexBuffer = dx12w::create_commited_upload_buffer_resource(device.get(), sizeof(float) * 6 * mesh.Vertices.size());
+		{
+			float* vertexBufferPtr = nullptr;
+			modelVertexBuffer.first->Map(0, nullptr, reinterpret_cast<void**>(&vertexBufferPtr));
+
+			for (std::size_t i = 0; i < mesh.Vertices.size(); i++)
+			{
+				vertexBufferPtr[i * 6] = mesh.Vertices[i].Position.X;
+				vertexBufferPtr[i * 6 + 1] = mesh.Vertices[i].Position.Y;
+				vertexBufferPtr[i * 6 + 2] = mesh.Vertices[i].Position.Z;
+				vertexBufferPtr[i * 6 + 3] = mesh.Vertices[i].Normal.X;
+				vertexBufferPtr[i * 6 + 4] = mesh.Vertices[i].Normal.Y;
+				vertexBufferPtr[i * 6 + 5] = mesh.Vertices[i].Normal.Z;
+			}
+
+			modelVertexBuffer.first->Unmap(0, nullptr);
+		}
+
+		modelVertexBufferView.BufferLocation = modelVertexBuffer.first->GetGPUVirtualAddress();
+		modelVertexBufferView.SizeInBytes = static_cast<UINT>(sizeof(float) * 6 * mesh.Vertices.size());
+		modelVertexBufferView.StrideInBytes = static_cast<UINT>(sizeof(float) * 6);
+
+		modelVertexNum = mesh.Vertices.size();
 	}
 
 
