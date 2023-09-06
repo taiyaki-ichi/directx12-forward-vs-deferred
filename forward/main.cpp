@@ -2,7 +2,9 @@
 #include"../external/OBJ-Loader/Source/OBJ_Loader.h"
 
 #include<DirectXMath.h>
+
 #include<iostream>
+#include<random>
 
 using namespace DirectX;
 
@@ -31,7 +33,11 @@ constexpr std::size_t MAX_FRAMES_IN_FLIGHT = FRAME_BUFFER_NUM;
 // 深度バッファのフォーマット
 constexpr DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
 
+// モデルの最大数
 constexpr std::size_t MAX_MODEL_NUM = 1000;
+
+// ライトの最大数
+constexpr std::size_t MAX_POINT_LIGHT_NUM = 1000;
 
 // 定数バッファに渡すデータ
 struct ConstantBufferObject
@@ -43,12 +49,27 @@ struct ConstantBufferObject
 	float _pad0{};
 };
 
+// ポイントライトのデータ
+struct PointLightData
+{
+	XMFLOAT4 pos{};
+	XMFLOAT4 color{};
+};
+
+// ライトの定数バッファに渡すデータ
+struct LightConstantBufferObject
+{
+	std::array<PointLightData, MAX_POINT_LIGHT_NUM> pointLights{};
+	std::uint32_t pointLightNum;
+};
+
 int main()
 {
 	
-	std::size_t modelEdgeNum = 8;
+	std::size_t modelEdgeNum = 6;
 	std::size_t modelToltalNum = modelEdgeNum * modelEdgeNum * modelEdgeNum;
 	constexpr float modelStrideLen = 8.f;
+	std::size_t pointLightNum = 50;
 
 
 	// ウィンドウハンドル
@@ -138,6 +159,18 @@ int main()
 	auto depthBuffer = dx12w::create_commited_texture_resource(device.get(), DEPTH_BUFFER_FORMAT, WINDOW_WIDTH, WINDOW_HEIGHT,
 		2, 1, 1, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &depthBufferClearValue);
 
+	// ライト用の定数バッファのリソース
+	std::array<dx12w::resource_and_state, MAX_FRAMES_IN_FLIGHT> lightConstantBuffers{
+		dx12w::create_commited_upload_buffer_resource(device.get(), dx12w::alignment<UINT64>(sizeof(LightConstantBufferObject), 256)),
+		dx12w::create_commited_upload_buffer_resource(device.get(), dx12w::alignment<UINT64>(sizeof(LightConstantBufferObject), 256))
+	};
+
+	// ライト用の定数バッファのリソースのポインタ
+	std::array<LightConstantBufferObject*, MAX_FRAMES_IN_FLIGHT> lightConstantBufferPtrs{};
+	for (std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+		lightConstantBuffers[i].first->Map(0, nullptr, reinterpret_cast<void**>(&lightConstantBufferPtrs[i]));
+	}
+
 
 	// 
 	// ディスクリプタヒープ
@@ -159,11 +192,15 @@ int main()
 	for (std::size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
 	{
 		// 第三引数での数の指定は定数バッファだけなので１
-		frameBufferDescriptorHeapCBVSRVUAVs[i].initialize(device.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+		frameBufferDescriptorHeapCBVSRVUAVs[i].initialize(device.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2);
 
 		// 定数バッファ
 		dx12w::create_CBV(device.get(), frameBufferDescriptorHeapCBVSRVUAVs[i].get_CPU_handle(0),
 			constantBuffers[i].first.get(), dx12w::alignment<UINT>(sizeof(ConstantBufferObject), 256));
+
+		// ライトの定数バッファ
+		dx12w::create_CBV(device.get(), frameBufferDescriptorHeapCBVSRVUAVs[i].get_CPU_handle(1),
+			lightConstantBuffers[i].first.get(), dx12w::alignment<UINT>(sizeof(LightConstantBufferObject), 256));
 	}
 
 	// フレームバッファに描画する際に使用する深度バッファ用のビューを作成するためのディスクリプタヒープ
@@ -197,6 +234,8 @@ int main()
 	auto frameBufferRootSignature = dx12w::create_root_signature(device.get(),
 		{ {{
 				// ConstantBufferObject
+				D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+				// LightConstantBufferObject
 				D3D12_DESCRIPTOR_RANGE_TYPE_CBV
 			}} },
 		{});
@@ -223,6 +262,34 @@ int main()
 	XMFLOAT3 up{ 0,1,0 };
 	float asspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
 
+	// ライトのデータをマップ
+	{
+		std::random_device seed_gen;
+		std::mt19937 engine(seed_gen());
+
+		// モデルのある領域の一様分布
+		std::uniform_real_distribution<float> posRnd(-((modelEdgeNum - 1) * modelStrideLen / 2.f), (modelEdgeNum - 1)* modelStrideLen / 2.f);
+		
+		std::uniform_real_distribution<float> colorRnd(0.f, 0.8f);
+
+		for (std::size_t i = 0; i < pointLightNum; i++)
+		{
+			auto pos = XMFLOAT4{ posRnd(engine),posRnd(engine) ,posRnd(engine) ,0.f };
+			auto color = XMFLOAT4{ colorRnd(engine),colorRnd(engine) ,colorRnd(engine) ,0.f};
+
+			for (std::size_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++)
+			{
+				lightConstantBufferPtrs[j]->pointLights[i].pos = pos;
+				lightConstantBufferPtrs[j]->pointLights[i].color = color;
+			}
+		}
+
+		for (std::size_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++)
+		{
+			lightConstantBufferPtrs[j]->pointLightNum = pointLightNum;
+		}
+	}
+
 
 	//
 	// メインループ
@@ -242,9 +309,9 @@ int main()
 					constantBufferPtrs[backBufferIndex]->model[x_i + y_i * modelEdgeNum + z_i * modelEdgeNum * modelEdgeNum] =
 					XMMatrixRotationY(static_cast<float>(frameCnt) / 50.f) *
 					XMMatrixTranslation(
-						x_i * modelStrideLen - modelEdgeNum * modelStrideLen / 2.f,
-						y_i * modelStrideLen - modelEdgeNum * modelStrideLen / 2.f,
-						z_i * modelStrideLen - modelEdgeNum * modelStrideLen / 2.f
+						x_i * modelStrideLen - (modelEdgeNum - 1) * modelStrideLen / 2.f,
+						y_i * modelStrideLen - (modelEdgeNum - 1) * modelStrideLen / 2.f,
+						z_i * modelStrideLen - (modelEdgeNum - 1) * modelStrideLen / 2.f
 					);
 		constantBufferPtrs[backBufferIndex]->view = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		constantBufferPtrs[backBufferIndex]->proj = DirectX::XMMatrixPerspectiveFovLH(VIEW_ANGLE, asspect, CAMERA_NEAR_Z, CAMERA_FAR_Z);
