@@ -37,6 +37,8 @@ struct ConstantBufferObject
 	XMMATRIX model{};
 	XMMATRIX view{};
 	XMMATRIX proj{};
+	XMFLOAT3 eye{};
+	float _pad0{};
 };
 
 int main()
@@ -226,6 +228,7 @@ int main()
 		constantBufferPtrs[backBufferIndex]->model = XMMatrixIdentity();
 		constantBufferPtrs[backBufferIndex]->view = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
 		constantBufferPtrs[backBufferIndex]->proj = DirectX::XMMatrixPerspectiveFovLH(VIEW_ANGLE, asspect, CAMERA_NEAR_Z, CAMERA_FAR_Z);
+		constantBufferPtrs[backBufferIndex]->eye = eye;
 
 		// コマンドのリセット
 		commandManager.reset_list(0);
