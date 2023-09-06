@@ -3,4 +3,14 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Shader\GeometryHeader.hlsli" />
+    <None Include="Shader\LightingHeader.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Shader\GeometryVertexShader.hlsl" />
+    <FxCompile Include="Shader\GeometryPixelShader.hlsl" />
+    <FxCompile Include="Shader\LightingVertexShader.hlsl" />
+    <FxCompile Include="Shader\LightingPixelShader.hlsl" />
+  </ItemGroup>
 </Project>
