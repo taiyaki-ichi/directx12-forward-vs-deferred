@@ -28,6 +28,9 @@ constexpr std::size_t COMMAND_ALLOCATORE_NUM = 1;
 // バッファリングの数
 constexpr std::size_t MAX_FRAMES_IN_FLIGHT = FRAME_BUFFER_NUM;
 
+// 深度バッファのフォーマット
+constexpr DXGI_FORMAT DEPTH_BUFFER_FORMAT = DXGI_FORMAT_D32_FLOAT;
+
 // 定数バッファに渡すデータ
 struct ConstantBufferObject
 {
@@ -54,6 +57,16 @@ int main()
 	// フレームバッファをクリアする値
 	constexpr std::array<float, 4> grayColor{ 0.5f,0.5f,0.5f,1.f };
 
+	// 深度バッファをクリアする値
+	constexpr D3D12_CLEAR_VALUE depthBufferClearValue{
+		.Format = DEPTH_BUFFER_FORMAT,
+		.DepthStencil = {.Depth = 1.f }
+	};
+
+
+	//
+	// リソース
+	//
 
 	// フレームバッファ
 	std::array<dx12w::resource_and_state, FRAME_BUFFER_NUM> frameBufferResources{};
@@ -111,6 +124,15 @@ int main()
 		constantBuffers[i].first->Map(0, nullptr, reinterpret_cast<void**>(&constantBufferPtrs[i]));
 	}
 
+	// 深度バッファのリソース
+	auto depthBuffer = dx12w::create_commited_texture_resource(device.get(), DEPTH_BUFFER_FORMAT, WINDOW_WIDTH, WINDOW_HEIGHT,
+		2, 1, 1, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, &depthBufferClearValue);
+
+
+	// 
+	// ディスクリプタヒープ
+	//
+
 	// フレームバッファのレンダーターゲットビューを作成するためのディスクリプタヒープ
 	dx12w::descriptor_heap frameBufferDescriptorHeapRTV{};
 	{
@@ -134,6 +156,17 @@ int main()
 			constantBuffers[i].first.get(), dx12w::alignment<UINT>(sizeof(ConstantBufferObject), 256));
 	}
 
+	// フレームバッファに描画する際に使用する深度バッファ用のビューを作成するためのディスクリプタヒープ
+	dx12w::descriptor_heap frameBufferDescriptorHeapDSV{};
+	{
+		frameBufferDescriptorHeapDSV.initialize(device.get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+
+		dx12w::create_texture2D_DSV(device.get(), frameBufferDescriptorHeapDSV.get_CPU_handle(), depthBuffer.first.get(), DEPTH_BUFFER_FORMAT, 0);
+	}
+
+	// 
+	// シェーダ
+	// 
 
 	// 頂点シェーダ
 	std::ifstream vertexShaderCSO{ L"Shader/VertexShader.cso",std::ios::binary };
@@ -144,6 +177,11 @@ int main()
 	std::ifstream pixelShaderCSO{ L"Shader/PixelShader.cso" ,std::ios::binary };
 	auto pixelShader = dx12w::load_blob(pixelShaderCSO);
 	pixelShaderCSO.close();
+
+
+	//
+	// ルートシグネチャとパイプライン 
+	// 
 
 	// フレームバッファに描画する際に使用するルートシグネチャ
 	auto frameBufferRootSignature = dx12w::create_root_signature(device.get(),
@@ -158,8 +196,13 @@ int main()
 		{ { "POSITION",DXGI_FORMAT_R32G32B32_FLOAT },{ "NORMAL",DXGI_FORMAT_R32G32B32_FLOAT } },
 		{ FRAME_BUFFER_FORMAT},
 		{ {vertexShader.data(),vertexShader.size()} ,{pixelShader.data(),pixelShader.size()} }
-	, false, false, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	, true, false, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 
+
+	//
+	// その他
+	//
+	
 	// ビューポート
 	constexpr D3D12_VIEWPORT viewport{ 0.f,0.f, static_cast<float>(WINDOW_WIDTH),static_cast<float>(WINDOW_HEIGHT),0.f,1.f };
 	// シザーレクト
@@ -169,6 +212,11 @@ int main()
 	XMFLOAT3 target{ 0,0,0 };
 	XMFLOAT3 up{ 0,1,0 };
 	float asspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
+
+
+	//
+	// メインループ
+	//
 
 	while (dx12w::update_window())
 	{
@@ -184,9 +232,13 @@ int main()
 
 		// リソースバリア
 		dx12w::resource_barrior(commandManager.get_list(), frameBufferResources[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
+		dx12w::resource_barrior(commandManager.get_list(), depthBuffer, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 		// レンダーターゲットをクリア
 		commandManager.get_list()->ClearRenderTargetView(frameBufferDescriptorHeapRTV.get_CPU_handle(backBufferIndex), grayColor.data(), 0, nullptr);
+
+		// 深度バッファをクリア
+		commandManager.get_list()->ClearDepthStencilView(frameBufferDescriptorHeapDSV.get_CPU_handle(), D3D12_CLEAR_FLAG_DEPTH, 1.f, 0, 0, nullptr);
 
 		// 描画領域の指定
 		commandManager.get_list()->RSSetViewports(1, &viewport);
@@ -194,7 +246,8 @@ int main()
 
 		// レンダーターゲットの指定
 		auto frameBufferCPUHandle = frameBufferDescriptorHeapRTV.get_CPU_handle(backBufferIndex);
-		commandManager.get_list()->OMSetRenderTargets(1, &frameBufferCPUHandle, false, nullptr);
+		auto depthBufferCPUHandle = frameBufferDescriptorHeapDSV.get_CPU_handle(0);
+		commandManager.get_list()->OMSetRenderTargets(1, &frameBufferCPUHandle, false, &depthBufferCPUHandle);
 
 		//
 		// モデルの描画
@@ -219,6 +272,7 @@ int main()
 
 		// リソースバリア
 		dx12w::resource_barrior(commandManager.get_list(), frameBufferResources[backBufferIndex], D3D12_RESOURCE_STATE_COMMON);
+		dx12w::resource_barrior(commandManager.get_list(), depthBuffer, D3D12_RESOURCE_STATE_COMMON);
 
 		// コマンドの実行処理
 		commandManager.get_list()->Close();
