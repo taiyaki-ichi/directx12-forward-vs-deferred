@@ -52,7 +52,4 @@ float4 main(VSOutput input) : SV_TARGET
 	float3 pointLightColor = CalcPointLight(worldPosition.xyz, normal, ray);
 
 	return float4(ambient + diffuse + specular + pointLightColor, 1.0f);
-
-
-	return float4(1.0f, 1.0f, 1.0f, 1.0f);
 }

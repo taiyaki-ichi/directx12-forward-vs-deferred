@@ -427,6 +427,7 @@ int main()
 		for (std::size_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++)
 		{
 			lightConstantBufferPtrs[j]->pointLightNum = pointLightNum;
+			lightConstantBufferPtrs[j]->eye = eye;
 		}
 	}
 
