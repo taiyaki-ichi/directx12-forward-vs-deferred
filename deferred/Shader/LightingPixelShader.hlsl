@@ -38,16 +38,22 @@ float3 CalcPointLight(float3 pos, float3 normal, float3 ray)
 float4 main(VSOutput input) : SV_TARGET
 {
 	float4 albedoColor = albedoColorTexture.Sample(smp,input.uv);
-	float3 normal = normalTexture.Sample(smp, input.uv).xyz;
+	float3 normal=normalTexture.Sample(smp, input.uv);
+	// 法線情報が書き込まれていない場合
+	if (!any(normal))
+		return float4(0.5f, 0.5f, 0.5f, 1.f);
+	// 法線ベクトルを-1,1の範囲に収める
+	normal = (normal.xyz * 2.f) - 1.f;
+
 	float4 worldPosition = float4(worldPositionTexture.Sample(smp, input.uv).xyz, 1.f);
-	float3 ray = normalize(eye.xyz - worldPosition.xyz);
+	float3 ray = normalize(worldPosition.xyz - eye.xyz);
 
 	float3 lightDir = normalize(float3(1.f, 0.f, 1.f));
 	float3 lightColor = float3(0.2f, 0.2f, 0.2f);
 
 	float3 ambient = albedoColor * 0.4f;
 	float3 diffuse = CalcDiffuse(lightDir, lightColor, normal.xyz);
-	float3 specular = CalcSpecular(lightDir, lightColor, normal.xyz, ray, 100.f);
+	float3 specular = CalcSpecular(lightDir, lightColor, normal.xyz, ray.xyz, 100.f);
 
 	float3 pointLightColor = CalcPointLight(worldPosition.xyz, normal, ray);
 
