@@ -9,7 +9,7 @@
 
 using namespace DirectX;
 
-constexpr std::size_t FRAME_CNT_NUM = 100;
+constexpr std::size_t FRAME_CNT_NUM = 500;
 
 // ウィンドウの大きさ
 constexpr std::size_t WINDOW_WIDTH = 800;
@@ -569,6 +569,8 @@ int main()
 	auto end = std::chrono::system_clock::now();
 
 	std::cout << "time per frame: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / static_cast<double>(FRAME_CNT_NUM) << std::endl;
+
+	system("PAUSE");
 
 	return 0;
 }
