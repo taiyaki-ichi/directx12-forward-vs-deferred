@@ -5,8 +5,11 @@
 
 #include<iostream>
 #include<random>
+#include<chrono>
 
 using namespace DirectX;
+
+constexpr std::size_t FRAME_CNT_NUM = 100;
 
 // ウィンドウの大きさ
 constexpr std::size_t WINDOW_WIDTH = 800;
@@ -436,6 +439,8 @@ int main()
 	// メインループ
 	//
 
+	auto start = std::chrono::system_clock::now();
+
 	std::size_t frameCnt = 0;
 	while (dx12w::update_window())
 	{
@@ -553,7 +558,17 @@ int main()
 		// コマンドの終了を待つ
 		commandManager.wait(0);
 
+		if (frameCnt >= FRAME_CNT_NUM) {
+			break;
+		}
+
 		// バックバッファをスワップ
 		swapChain->Present(1, 0);
 	}
+
+	auto end = std::chrono::system_clock::now();
+
+	std::cout << "time per frame: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / static_cast<double>(FRAME_CNT_NUM) << std::endl;
+
+	return 0;
 }
