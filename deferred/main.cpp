@@ -77,18 +77,22 @@ struct LightConstantBufferObject
 int main()
 {
 	constexpr float modelStrideLen = 8.f;
-	std::size_t pointLightNum = 50;
-
-	// 計測フレーム数
-	std::size_t frameCntNum;
-	std::cout << "frame num: ";
-	std::cin >> frameCntNum;
 
 	// モデルの数
-	std::size_t modelEdgeNum;
+	std::size_t modelEdgeNum{};
 	std::cout << "model edge num (total = n * n * n) (0 <= total <= " << MAX_MODEL_NUM << "): ";
 	std::cin >> modelEdgeNum;
 	std::size_t modelToltalNum = modelEdgeNum * modelEdgeNum * modelEdgeNum;
+
+	// ポイントライトの数
+	std::size_t pointLightNum{};
+	std::cout << "point light num (0 <= n <= " << MAX_POINT_LIGHT_NUM << "): ";
+	std::cin >> pointLightNum;
+
+	// 計測フレーム数
+	std::size_t frameCntNum{};
+	std::cout << "frame num: ";
+	std::cin >> frameCntNum;
 
 
 	// ウィンドウハンドル
