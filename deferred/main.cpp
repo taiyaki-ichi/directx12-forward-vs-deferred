@@ -9,8 +9,6 @@
 
 using namespace DirectX;
 
-constexpr std::size_t FRAME_CNT_NUM = 500;
-
 // ウィンドウの大きさ
 constexpr std::size_t WINDOW_WIDTH = 800;
 constexpr std::size_t WINDOW_HEIGHT = 600;
@@ -84,6 +82,9 @@ int main()
 	constexpr float modelStrideLen = 8.f;
 	std::size_t pointLightNum = 50;
 
+	std::size_t frameCntNum;
+	std::cout << "frame num: ";
+	std::cin >> frameCntNum;
 
 	// ウィンドウハンドル
 	auto hwnd = dx12w::create_window(L"deferred", WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -558,7 +559,7 @@ int main()
 		// コマンドの終了を待つ
 		commandManager.wait(0);
 
-		if (frameCnt >= FRAME_CNT_NUM) {
+		if (frameCnt >= frameCntNum) {
 			break;
 		}
 
@@ -568,7 +569,12 @@ int main()
 
 	auto end = std::chrono::system_clock::now();
 
-	std::cout << "time per frame: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() / static_cast<double>(FRAME_CNT_NUM) << std::endl;
+	// ウィンドウの破壊
+	DestroyWindow(hwnd);
+
+	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "time: " << time << std::endl;
+	std::cout << "time per frame: " << time / static_cast<double>(frameCntNum) << std::endl;
 
 	system("PAUSE");
 
