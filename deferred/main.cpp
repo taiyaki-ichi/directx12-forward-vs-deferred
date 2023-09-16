@@ -82,6 +82,7 @@ int main()
 	constexpr float modelStrideLen = 8.f;
 	std::size_t pointLightNum = 50;
 
+	// Œv‘ªƒtƒŒ[ƒ€”
 	std::size_t frameCntNum;
 	std::cout << "frame num: ";
 	std::cin >> frameCntNum;
