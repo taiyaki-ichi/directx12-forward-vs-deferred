@@ -76,9 +76,6 @@ struct LightConstantBufferObject
 
 int main()
 {
-
-	std::size_t modelEdgeNum = 6;
-	std::size_t modelToltalNum = modelEdgeNum * modelEdgeNum * modelEdgeNum;
 	constexpr float modelStrideLen = 8.f;
 	std::size_t pointLightNum = 50;
 
@@ -86,6 +83,13 @@ int main()
 	std::size_t frameCntNum;
 	std::cout << "frame num: ";
 	std::cin >> frameCntNum;
+
+	// モデルの数
+	std::size_t modelEdgeNum;
+	std::cout << "model edge num (total = n * n * n) (0 <= total <= " << MAX_MODEL_NUM << "): ";
+	std::cin >> modelEdgeNum;
+	std::size_t modelToltalNum = modelEdgeNum * modelEdgeNum * modelEdgeNum;
+
 
 	// ウィンドウハンドル
 	auto hwnd = dx12w::create_window(L"deferred", WINDOW_WIDTH, WINDOW_HEIGHT);
