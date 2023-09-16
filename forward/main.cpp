@@ -26,7 +26,7 @@ constexpr std::size_t FRAME_BUFFER_NUM = 2;
 constexpr DXGI_FORMAT FRAME_BUFFER_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
 
 // コマンドアロケータの数
-constexpr std::size_t COMMAND_ALLOCATORE_NUM = 1;
+constexpr std::size_t COMMAND_ALLOCATORE_NUM = FRAME_BUFFER_NUM;
 
 // バッファリングの数
 constexpr std::size_t MAX_FRAMES_IN_FLIGHT = FRAME_BUFFER_NUM;
@@ -373,7 +373,7 @@ int main()
 		constantBufferPtrs[backBufferIndex]->eye = eye;
 
 		// コマンドのリセット
-		commandManager.reset_list(0);
+		commandManager.reset_list(backBufferIndex);
 
 		// リソースバリア
 		dx12w::resource_barrior(commandManager.get_list(), frameBufferResources[backBufferIndex], D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -425,7 +425,7 @@ int main()
 		commandManager.signal();
 
 		// コマンドの終了を待つ
-		commandManager.wait(0);
+		commandManager.wait(prevBackBufferIndex);
 
 		if (frameCnt >= frameCntNum) {
 			break;
