@@ -422,8 +422,7 @@ int main()
 
 	// ライトのデータをマップ
 	{
-		std::random_device seed_gen;
-		std::mt19937 engine(seed_gen());
+		std::mt19937 engine(0);
 
 		// モデルのある領域の一様分布
 		std::uniform_real_distribution<float> posRnd(-lightRange, lightRange);
