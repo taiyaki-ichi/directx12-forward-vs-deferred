@@ -94,6 +94,8 @@ int main()
 	std::cout << "frame num: ";
 	std::cin >> frameCntNum;
 
+	// ライトの範囲
+	float lightRange = (modelEdgeNum - 1) * modelStrideLen / 2.f;
 
 	// ウィンドウハンドル
 	auto hwnd = dx12w::create_window(L"deferred", WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -415,15 +417,22 @@ int main()
 	XMFLOAT3 up{ 0,1,0 };
 	float asspect = static_cast<float>(WINDOW_WIDTH) / static_cast<float>(WINDOW_HEIGHT);
 
+	// ライトの移動速度
+	std::array<std::array<float, 3>, MAX_POINT_LIGHT_NUM> lightVelocity{};
+
 	// ライトのデータをマップ
 	{
 		std::random_device seed_gen;
 		std::mt19937 engine(seed_gen());
 
 		// モデルのある領域の一様分布
-		std::uniform_real_distribution<float> posRnd(-((modelEdgeNum - 1) * modelStrideLen / 2.f), (modelEdgeNum - 1) * modelStrideLen / 2.f);
+		std::uniform_real_distribution<float> posRnd(-lightRange, lightRange);
 
+		// ライトの色用の一様分布
 		std::uniform_real_distribution<float> colorRnd(0.f, 0.8f);
+
+		// ライトの速度用の一様分布
+		std::uniform_real_distribution<float> speedRnd(0.01f, 0.05f);
 
 		for (std::size_t i = 0; i < pointLightNum; i++)
 		{
@@ -435,6 +444,8 @@ int main()
 				lightConstantBufferPtrs[j]->pointLights[i].pos = pos;
 				lightConstantBufferPtrs[j]->pointLights[i].color = color;
 			}
+
+			lightVelocity[i] = { speedRnd(engine),speedRnd(engine) ,speedRnd(engine) };
 		}
 
 		for (std::size_t j = 0; j < MAX_FRAMES_IN_FLIGHT; j++)
@@ -445,18 +456,49 @@ int main()
 	}
 
 
+
 	//
 	// メインループ
 	//
 
 	auto start = std::chrono::system_clock::now();
+	auto backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+	auto prevFrameTime = std::chrono::system_clock::now();
 
 	std::size_t frameCnt = 0;
 	while (dx12w::update_window())
 	{
 		frameCnt++;
 
-		auto backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+		auto prevBackBufferIndex = backBufferIndex;
+		backBufferIndex = swapChain->GetCurrentBackBufferIndex();
+		
+		auto deltaTime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
+
+		// ライトの位置を更新
+		for (std::size_t i = 0; i < pointLightNum; i++)
+		{
+			// 移動後の位置
+			auto newPos = std::array<float, 3>{
+				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.x + lightVelocity[i][0] * deltaTime,
+				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.y + lightVelocity[i][1] * deltaTime,
+				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.z + lightVelocity[i][2] * deltaTime,
+			};
+
+			// ライトが範囲外に出だ場合の位置と速度の修正
+			for (std::size_t j = 0; j < newPos.size(); j++)
+			{
+				auto clampValue = std::clamp(newPos[j], -lightRange, lightRange);
+				if (clampValue != newPos[j])
+				{
+					lightVelocity[i][j] *= -1.f;
+					newPos[j] = clampValue;
+				}
+			}
+
+			// 新しい位置を反映
+			lightConstantBufferPtrs[backBufferIndex]->pointLights[i].pos = { newPos[0],newPos[1] ,newPos[2] ,0.f };
+		}
 
 		// 定数バッファのデータをマップ
 		for (std::size_t x_i = 0; x_i < modelEdgeNum; x_i++)
@@ -578,12 +620,17 @@ int main()
 
 	auto end = std::chrono::system_clock::now();
 
+	// コマンドの終了を待つ
+	commandManager.wait(0);
+
 	// ウィンドウの破壊
 	DestroyWindow(hwnd);
 
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "time: " << time << std::endl;
-	std::cout << "time per frame: " << time / static_cast<double>(frameCntNum) << std::endl;
+	std::cout << "time (ms): " << time << std::endl;
+	std::cout << "frame num: " << frameCnt << std::endl;
+	std::cout << "time per frame (ms): " << time / static_cast<double>(frameCnt) << std::endl;
+	std::cout << "fps: " << static_cast<double>(frameCnt) * 1000.0 / time << std::endl;
 
 	system("PAUSE");
 

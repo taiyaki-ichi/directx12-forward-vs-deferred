@@ -23,7 +23,7 @@ float3 CalcPointLight(float3 pos, float3 normal, float3 ray)
 		float distance = length(pos.xyz - pointLightData[i].pos.xyz);
 
 		// ‰e‹¿”ÍˆÍ
-		float range = 20.f;
+		float range = 15.f;
 
 		// ‰e‹¿—¦
 		float affect = 1.f - min(1.f, distance / range);
