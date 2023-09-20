@@ -614,7 +614,7 @@ int main()
 		}
 
 		// バックバッファをスワップ
-		swapChain->Present(1, 0);
+		swapChain->Present(0, 0);
 	}
 
 	auto end = std::chrono::system_clock::now();
