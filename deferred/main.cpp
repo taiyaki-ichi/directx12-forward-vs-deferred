@@ -431,7 +431,7 @@ int main()
 		std::uniform_real_distribution<float> colorRnd(0.f, 0.8f);
 
 		// ライトの速度用の一様分布
-		std::uniform_real_distribution<float> speedRnd(0.01f, 0.05f);
+		std::uniform_real_distribution<float> speedRnd(1.f, 10.f);
 
 		for (std::size_t i = 0; i < pointLightNum; i++)
 		{
@@ -472,16 +472,17 @@ int main()
 		auto prevBackBufferIndex = backBufferIndex;
 		backBufferIndex = swapChain->GetCurrentBackBufferIndex();
 		
-		auto deltaTime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - start).count();
+		auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - prevFrameTime).count();
+		prevFrameTime = std::chrono::system_clock::now();
 
 		// ライトの位置を更新
 		for (std::size_t i = 0; i < pointLightNum; i++)
 		{
 			// 移動後の位置
 			auto newPos = std::array<float, 3>{
-				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.x + lightVelocity[i][0] * deltaTime,
-				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.y + lightVelocity[i][1] * deltaTime,
-				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.z + lightVelocity[i][2] * deltaTime,
+				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.x + lightVelocity[i][0] * deltaTime / 1000.f,
+				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.y + lightVelocity[i][1] * deltaTime / 1000.f,
+				lightConstantBufferPtrs[prevBackBufferIndex]->pointLights[i].pos.z + lightVelocity[i][2] * deltaTime / 1000.f,
 			};
 
 			// ライトが範囲外に出だ場合の位置と速度の修正
