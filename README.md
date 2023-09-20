@@ -32,7 +32,13 @@ GPU: Intel UHD Graphics 620
 
 ### 実験環境
 
-また、ウィンドウが出現する際のFPSが安定しないため計測フレームは5000にした
+CPU: 12th Gen Intel Core i9-12900K
+
+GPU: NVIDIA GeForce RTX 4090
+
+「Release」「x86」でビルドし時間を計測
+
+また、ウィンドウが出現する際の演出でFPSが安定しないため計測フレームは5000にした
 
 ### 描画モデル1体(5000フレーム計測しfpsを算出)
 
