@@ -23,7 +23,7 @@ constexpr float VIEW_ANGLE = DirectX::XM_PIDIV2;
 // フレームバッファの数
 constexpr std::size_t FRAME_BUFFER_NUM = 2;
 // フレームバッファのフォーマット
-constexpr DXGI_FORMAT FRAME_BUFFER_FORMAT = DXGI_FORMAT_B8G8R8A8_UNORM;
+constexpr DXGI_FORMAT FRAME_BUFFER_FORMAT = DXGI_FORMAT_R8G8B8A8_UNORM;
 
 // コマンドアロケータの数
 constexpr std::size_t COMMAND_ALLOCATORE_NUM = 1;
